@@ -133,7 +133,7 @@ static void msp_config_fc() {
 
             // load font
             char font_path[256];
-            snprintf(font_path, sizeof(font_path), "/tmp/%c%c%c%c.bmp", fc_variant[0], fc_variant[1], fc_variant[2], fc_variant[3]);
+            snprintf(font_path, sizeof(font_path), "/home/gli/prj/fpv_osd/font/%c%c%c%c.bmp", fc_variant[0], fc_variant[1], fc_variant[2], fc_variant[3]);
             font_init(font_path);
             // printf("pixel:0x%08X\n", osd_font[0]);
         }
@@ -205,20 +205,20 @@ static void msp_parse_displayport(uint8_t *payload) {
 
     case SUBCMD_CLEAR:
         osd_clear();
-        printf("C");
+        // printf("C");
         break;
 
     case SUBCMD_WRITE:
         uint8_t osd_len = len - 4;
         if (osd_len != 0) {
             osd_write(row, col, &payload[7], osd_len);
-            printf("W");
+            // printf("W");
         }
         break;
 
     case SUBCMD_DRAW:
         osd_draw();
-        printf("D\n");
+        // printf("D\n");
         break;
 
     case SUBCMD_CONFIG:

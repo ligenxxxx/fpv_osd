@@ -22,6 +22,11 @@
     apt list --upgradable
     sudo apt install -y vim build-essential cmake gcc gdb samba libcamera-dev libdrm-tests libdrm-dev git
 
+- 打开串口
+    sudo raspi-config
+    Interface Options -> Serial Port -> login No -> hardware Yes
+    Finish -> reboot Yes
+
 - 在树莓派创建prj folder
     mkdir -p ~/prj
 

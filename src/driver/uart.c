@@ -90,6 +90,7 @@ int uart_open() {
     char port[] = "/dev/ttyS0";
     int fd = open(port, O_RDWR);
     if (fd < 0) {
+        printf("uart %s open failed\n", port);
         return -1;
     }
     uart_set_opt(fd, 115200, 8, 'N', 1);
