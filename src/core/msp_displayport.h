@@ -1,0 +1,1 @@
+#pragma once#ifdef __cplusplusextern "C" {#endif#include <stdint.h>#define OSD_HD_COLS 30#define OSD_HD_ROWS 13void *pthread_msp_displayport(void *arg);#ifdef __cplusplus}#endif

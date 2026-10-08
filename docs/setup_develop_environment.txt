@@ -1,0 +1,76 @@
+使用samba+vscode编辑代码
+使用ssh运行app
+
+- 连接wifi网络(也可以在imager中完成)
+    sudo nmtui
+    activate a connection -> edit a connection
+    输入密码并连接
+
+- 开启ssh server(也可以在imager中完成)
+    sudo systemctl start ssh
+    sudo systemctl enable ssh
+
+- 获取ip
+    ifconfig
+
+- 连接到树莓派,在局域网内自己的本地电脑操作
+    ping 192.168.10.8
+    ssh gli@192.168.10.8
+
+- 在树莓派开发板安装编译环境
+    sudo apt update
+    apt list --upgradable
+    sudo apt install -y vim build-essential cmake gcc gdb samba libcamera-dev libdrm-tests libdrm-dev git
+
+- 在树莓派创建prj folder
+    mkdir -p ~/prj
+
+- 在树莓派配置samba
+    sudo vi /etc/samba/smb.conf
+    在结尾添加:
+    [prj]
+       path = /home/gli/prj
+       browseable = yes
+       writeable = yes
+       create mask = 0775
+       directory mask = 0775
+       public = no
+       valid users = gli
+       
+       change notify = yes
+       stat cache = no
+       directory name cache = no
+
+       oplocks = no
+       level2 oplocks = no
+
+- 在树莓派设置samba密码
+    sudo smbpasswd -a gli
+- 在树莓派重启smaba服务
+    sudo systemctl restart smbd
+    sudo systemctl enable smbd
+    工作正常后设置上电默认开启
+    
+
+- 在本地电脑映射prj
+    win+e打开我的电脑
+    上方... -> 映射网络驱动器 -> 文件夹填写\\192.168.10.8\prj
+
+- 在树莓派安装git方便管理源代码
+    git config --global user.name "gli"
+    git config --global user.email "ligenxxxx@gmail.com"
+    git config --global init.defaultBranch main
+
+- 配置ssh
+    ssh-keygen -t rsa -C "ligenxxxx@gmail.com"
+    - open https://github.com/settings/ssh/new
+    - enter SSH and GPG keys
+    - enter New SSH key
+    - name title
+    - copy /home/gli/.ssh/id_ras.pub data to Key
+    - add SSH key
+    
+
+- 在windows，cd到工程路径并运行
+    git config core.filemode false
+    

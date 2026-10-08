@@ -1,0 +1,9 @@
+- 修改/boot/firmware/config.txt在[All]
+    enable_tvout=1
+    sdtv_mode=0 #ntsc
+    dtoverlay=vc4-kms-v3d,composite=1
+    hdmi_ignore_hotplug=1
+- 修改/boot/firmware/cmdline.txt
+    video=Composite-1:720x480@60i
+- sudo reboot
+    重启时候cvbs会输出开机画面和命令行
