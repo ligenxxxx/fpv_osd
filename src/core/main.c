@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include "camera.h"
 #include "driver/drm.h"
 #include "msp_displayport.h"
 
@@ -39,12 +40,16 @@ int drm_test() {
 }
 
 int main(void) {
-    pthread_t thread_msp;
-    pthread_create(&thread_msp, NULL, pthread_msp_displayport, NULL);
 
     // drm_test();
 
+    camera_init();
+
+#if (0)
+    pthread_t thread_msp;
+    pthread_create(&thread_msp, NULL, pthread_msp_displayport, NULL);
     pthread_join(thread_msp, NULL);
+#endif
 
     return 0;
 }
