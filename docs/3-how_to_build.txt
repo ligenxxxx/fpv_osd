@@ -1,0 +1,17 @@
+Assuming you have already completed the first two steps:
+    1. how_to_set_cvbs_out.txt
+    2. setup_develop_environment.txt
+
+- copy or clone the repo to shared folder [prj/fpv_osd]
+
+- edit source code with vscode
+    Open the shared folder [prj/fpv_osd] using VS Code and edit the source code if needed.
+
+- build
+    cd ~/prj/fpv_osd
+    cmake ..
+    make -j
+
+- run
+    ./fpv_osd
+
