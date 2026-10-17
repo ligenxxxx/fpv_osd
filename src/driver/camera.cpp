@@ -122,15 +122,29 @@ static void destroy_drm_buffers() {
 }
 
 static bool show_drm_buffer(DrmBuffer *buffer) {
-    if (!buffer || !buffer->fb_id || drm_get_camera_plane_id() == 0 || drm_get_crtc_id() == 0)
+    if (!buffer || !buffer->fb_id ||
+        drm_get_camera_plane_id() == 0 || drm_get_crtc_id() == 0)
         return false;
 
-    if (drmModeSetPlane(drm_get_fd(), drm_get_camera_plane_id(), drm_get_crtc_id(), buffer->fb_id, 0,
-                        0, 0, 720, 480,
-                        0, 0, g_width << 16, g_height << 16) != 0) {
-        std::cerr << "drmModeSetPlane failed: " << strerror(errno) << std::endl;
+    int tv_width = 0, tv_height = 0;
+    drm_get_resolution(&tv_width, &tv_height);
+    if (tv_width <= 0 || tv_height <= 0) {
+        std::cerr << "Invalid TV-out resolution: "
+                  << tv_width << "x" << tv_height << std::endl;
         return false;
     }
+
+    if (drmModeSetPlane(drm_get_fd(),
+                        drm_get_camera_plane_id(),
+                        drm_get_crtc_id(),
+                        buffer->fb_id, 0,
+                        0, 0, tv_width, tv_height,
+                        0, 0, g_width << 16, g_height << 16) != 0) {
+        std::cerr << "drmModeSetPlane failed: "
+                  << strerror(errno) << std::endl;
+        return false;
+    }
+
     return true;
 }
 

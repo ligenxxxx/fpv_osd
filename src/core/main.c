@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "camera.h"
+#include "driver/camera.h"
 #include "driver/drm.h"
 #include "msp_displayport.h"
 
@@ -18,7 +18,7 @@ int main(void) {
     }
 
     pthread_t thread_msp;
-    pthread_create(&thread_msp, NULL, pthread_msp_displayport, NULL);
+    int ret = pthread_create(&thread_msp, NULL, pthread_msp_displayport, NULL);
     if (ret != 0) {
         printf("pthread_create failed: %d\n", ret);
         return -1;

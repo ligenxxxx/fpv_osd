@@ -159,7 +159,7 @@ int drm_open(void) {
     }
 
     if (!found) {
-        fprintf(stderr, "720 mode not found on connector %u\n", conn_id);
+        fprintf(stderr, "720H mode not found on connector %u\n", conn_id);
         drm_close();
         return -1;
     }

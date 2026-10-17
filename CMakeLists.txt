@@ -5,8 +5,8 @@ project(fpv_osd C CXX)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-file(GLOB SRC_FILES_CORE   "src/core/*.c" "src/core/*.cpp" "src/core/*.h")
-file(GLOB SRC_FILES_DRIVER "src/driver/*.c" "src/driver/*.h")
+file(GLOB SRC_FILES_CORE   "src/core/*.c" "src/core/*.h")
+file(GLOB SRC_FILES_DRIVER "src/driver/*.c"  "src/driver/*.cpp" "src/driver/*.h")
 
 set(SRC_FILES
 	${SRC_FILES_CORE}
