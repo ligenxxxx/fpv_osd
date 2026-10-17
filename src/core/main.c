@@ -6,50 +6,24 @@
 #include "driver/drm.h"
 #include "msp_displayport.h"
 
-int drm_test() {
-    if (drm_open() != 0) {
+int main(void) {
+    if (drm_open() < 0) {
+        printf("drm open failed.\n");
         return -1;
     }
+    if (camera_start() < 0) {
+        return -2;
 
-    int width, height;
-    drm_get_resolution(&width, &height);
-
-    int pos_x = 100;
-    int speed = 5;
-
-    printf("Start OSD render loop\n");
-
-    for (int frame = 0; frame < 500; frame++) {
-        drm_clear_back_buffer(MAKE_COLOR(128, 128, 128));
-
-        pos_x += speed;
-        if (pos_x > width - 50 || pos_x < 5)
-            speed = -speed;
-
-        for (int y = 200; y < 250; y++) {
-            for (int x = pos_x; x < pos_x + 50; x++) {
-                drm_draw_pixel(x, y, MAKE_COLOR(0, 128, 255));
-            }
-        }
-
-        drm_swap_buffers();
+        printf("camera_start\n");
     }
 
-    drm_close();
-    return 0;
-}
-
-int main(void) {
-
-    // drm_test();
-
-    camera_init();
-
-#if (0)
     pthread_t thread_msp;
     pthread_create(&thread_msp, NULL, pthread_msp_displayport, NULL);
+    if (ret != 0) {
+        printf("pthread_create failed: %d\n", ret);
+        return -1;
+    }
     pthread_join(thread_msp, NULL);
-#endif
 
     return 0;
 }

@@ -4,7 +4,8 @@
 extern "C" {
 #endif
 
-int camera_init();
+int camera_start(void);
+void camera_stop(void);
 
 #ifdef __cplusplus
 }

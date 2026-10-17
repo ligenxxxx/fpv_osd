@@ -1,15 +1,15 @@
 #include <stdint.h>
+#include <stdio.h>
 
 #include "drm.h"
 #include "font.h"
 #include "osd.h"
 
 void osd_init() {
-    drm_open();
 }
 
 void osd_clear() {
-    drm_clear_back_buffer(MAKE_COLOR(127, 127, 127));
+    drm_clear_back_buffer(OSD_TRANSPARENT);
 }
 
 void osd_write(uint8_t row, uint8_t col, uint8_t *buf, uint8_t len) {

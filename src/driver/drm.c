@@ -1,5 +1,7 @@
+#include <drm_fourcc.h>
 #include <fcntl.h>
 #include <libdrm/drm.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,16 +12,6 @@
 #include <xf86drmMode.h>
 
 #include "drm.h"
-
-typedef struct {
-    uint32_t width;
-    uint32_t height;
-    uint32_t pitch;
-    uint32_t handle;
-    uint32_t size;
-    uint32_t fb_id;
-    uint32_t *map;
-} drm_buffer_t;
 
 static int fd = -1;
 static drmModeRes *resources = NULL;
@@ -52,49 +44,60 @@ static drmEventContext evctx = {
 };
 
 static int create_dumb_buffer(drm_buffer_t *buf) {
-    struct drm_mode_create_dumb create_req = {0};
-    create_req.width = mode.hdisplay;
-    create_req.height = mode.vdisplay;
-    create_req.bpp = 32; // XRGB8888
+    struct drm_mode_create_dumb req = {0};
+    req.width = mode.hdisplay;
+    req.height = mode.vdisplay;
+    req.bpp = 32;
 
-    if (drmIoctl(fd, DRM_IOCTL_MODE_CREATE_DUMB, &create_req) < 0) {
-        perror("DRM_IOCTL_MODE_CREATE_DUMB failed");
+    if (drmIoctl(fd, DRM_IOCTL_MODE_CREATE_DUMB, &req) < 0) {
+        perror("CREATE_DUMB");
         return -1;
     }
 
-    buf->width = create_req.width;
-    buf->height = create_req.height;
-    buf->pitch = create_req.pitch;
-    buf->handle = create_req.handle;
-    buf->size = create_req.size;
+    buf->width = req.width;
+    buf->height = req.height;
+    buf->pitch = req.pitch;
+    buf->handle = req.handle;
+    buf->size = req.size;
 
-    if (drmModeAddFB(fd, mode.hdisplay, mode.vdisplay, 24, 32,
-                     buf->pitch, buf->handle, &buf->fb_id) < 0) {
-        perror("drmModeAddFB failed");
-        return -1;
+    uint32_t handles[4] = {buf->handle, 0, 0, 0};
+    uint32_t pitches[4] = {buf->pitch, 0, 0, 0};
+    uint32_t offsets[4] = {0, 0, 0, 0};
+
+    if (drmModeAddFB2(fd, buf->width, buf->height,
+                      DRM_FORMAT_ARGB8888,
+                      handles, pitches, offsets,
+                      &buf->fb_id, 0) < 0) {
+        perror("drmModeAddFB2");
+        goto fail;
     }
 
     struct drm_mode_map_dumb map_req = {0};
     map_req.handle = buf->handle;
 
     if (drmIoctl(fd, DRM_IOCTL_MODE_MAP_DUMB, &map_req) < 0) {
-        perror("DRM_IOCTL_MODE_MAP_DUMB failed");
-        return -1;
+        perror("MAP_DUMB");
+        goto fail;
     }
 
-    buf->map = mmap(0, buf->size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, map_req.offset);
+    buf->map = mmap(NULL, buf->size,
+                    PROT_READ | PROT_WRITE, MAP_SHARED,
+                    fd, map_req.offset);
+
     if (buf->map == MAP_FAILED) {
-        perror("mmap failed");
-        return -1;
+        buf->map = NULL;
+        perror("mmap");
+        goto fail;
     }
 
-    // clear as black
     memset(buf->map, 0, buf->size);
     return 0;
-}
 
-// destroy Dumb Buffer
-static void destroy_dumb_buffer(drm_buffer_t *buf) {
+fail:
+    destroy_dumb_buffer(buf);
+    return -1;
+}
+void destroy_dumb_buffer(drm_buffer_t *buf) {
     if (buf->map && buf->map != MAP_FAILED) {
         munmap(buf->map, buf->size);
     }
@@ -143,8 +146,26 @@ int drm_open(void) {
     }
 
     conn_id = connector->connector_id;
-    mode = connector->modes[0];
-    printf("[DRM] resolution: %dx%d @ %dHz\n", mode.hdisplay, mode.vdisplay, mode.vrefresh);
+
+    int found = 0;
+    for (int i = 0; i < connector->count_modes; i++) {
+        drmModeModeInfo *m = &connector->modes[i];
+        if (m->hdisplay == 720 &&
+            (m->flags & DRM_MODE_FLAG_INTERLACE)) {
+            mode = *m;
+            found = 1;
+            break;
+        }
+    }
+
+    if (!found) {
+        fprintf(stderr, "720 mode not found on connector %u\n", conn_id);
+        drm_close();
+        return -1;
+    }
+
+    printf("[DRM] resolution: %dx%d @ %dHz\n",
+           mode.hdisplay, mode.vdisplay, mode.vrefresh);
 
     if (connector->encoder_id) {
         encoder = drmModeGetEncoder(fd, connector->encoder_id);
@@ -178,45 +199,49 @@ uint32_t *drm_get_back_buffer(void) {
 }
 
 void drm_clear_back_buffer(uint32_t color) {
-    uint32_t *back_map = drm_get_back_buffer();
-    uint32_t pixel_count = buffers[0].size / 4;
-    for (uint32_t i = 0; i < pixel_count; i++) {
-        back_map[i] = color;
+    int back_idx = 1 - front_buf_idx;
+    drm_buffer_t *buf = &buffers[back_idx];
+
+    for (uint32_t y = 0; y < buf->height; y++) {
+        uint32_t *row = (uint32_t *)((uint8_t *)buf->map + y * buf->pitch);
+
+        for (uint32_t x = 0; x < buf->width; x++)
+            row[x] = color;
     }
 }
 
 void drm_draw_pixel(int x, int y, uint32_t color) {
-    if (x < 0 || x >= (int)mode.hdisplay || y < 0 || y >= (int)mode.vdisplay)
+    if (x < 0 || x >= (int)mode.hdisplay ||
+        y < 0 || y >= (int)mode.vdisplay)
         return;
-    uint32_t *back_map = drm_get_back_buffer();
-    back_map[y * mode.hdisplay + x] = color;
+
+    int back_idx = 1 - front_buf_idx;
+    drm_buffer_t *buf = &buffers[back_idx];
+
+    uint32_t *row = (uint32_t *)((uint8_t *)buf->map + y * buf->pitch);
+
+    row[x] = color;
 }
 
 int drm_swap_buffers(void) {
     int back_idx = 1 - front_buf_idx;
 
-    if (drmModePageFlip(fd, crtc_id, buffers[back_idx].fb_id, DRM_MODE_PAGE_FLIP_EVENT, NULL) < 0) {
-        perror("drmModePageFlip failed");
+    int ret = drmModeSetPlane(
+        fd,
+        DRM_OSD_PLANE,
+        crtc_id,
+        buffers[back_idx].fb_id,
+        0,
+        0, 0,
+        mode.hdisplay, mode.vdisplay,
+        0, 0,
+        mode.hdisplay << 16,
+        mode.vdisplay << 16);
+
+    if (ret < 0) {
+        perror("drmModeSetPlane for OSD failed");
         return -1;
     }
-
-    page_flip_pending = 1;
-
-    while (page_flip_pending) {
-        fd_set fds;
-        FD_ZERO(&fds);
-        FD_SET(fd, &fds);
-
-        int ret = select(fd + 1, &fds, NULL, NULL, NULL);
-        if (ret < 0) {
-            perror("select error");
-            break;
-        }
-        if (ret > 0 && FD_ISSET(fd, &fds)) {
-            drmHandleEvent(fd, &evctx);
-        }
-    }
-
     front_buf_idx = back_idx;
     return 0;
 }
@@ -248,4 +273,16 @@ int drm_close(void) {
     if (fd >= 0)
         close(fd);
     return 0;
+}
+
+int drm_get_fd(void) {
+    return fd;
+}
+
+uint32_t drm_get_crtc_id(void) {
+    return DRM_CRTC_ID;
+}
+
+uint32_t drm_get_camera_plane_id(void) {
+    return DRM_CAMERA_PLANE;
 }

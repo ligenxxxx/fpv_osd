@@ -108,7 +108,7 @@ void font_init(unsigned char *bmp_path) {
                 uint8_t r = row_buffer[col * 3 + 2];
 
                 if (b == 0x7F && g == 0x7F && r == 0x7F)
-                    dst_row[col] = (0x00u << 24) | ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
+                    dst_row[col] = 0x00000000; // transparent
                 else
                     dst_row[col] = (0xFFu << 24) | ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
             }
